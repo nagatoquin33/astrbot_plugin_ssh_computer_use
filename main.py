@@ -28,7 +28,7 @@ PLUGIN_NAME = "astrbot_plugin_ssh_computer_use"
     PLUGIN_NAME,
     "nagatoquin33",
     "基于 SSH 的全平台远程计算机操控：命令/文件/截图/键鼠，Windows 与 Linux 通用",
-    "v0.2.8",
+    "v0.2.9",
     "https://github.com/nagatoquin33/astrbot_plugin_ssh_computer_use",
 )
 class SshComputerUsePlugin(Star):

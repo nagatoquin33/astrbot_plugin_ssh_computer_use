@@ -131,6 +131,7 @@ ssh 代理 安装|状态|重启
 - **截图全黑/失败**：目标机锁屏或无人登录，Agent 未在交互会话中运行；解锁后 `ssh 代理 状态` 检查
 - **免密配置后仍要密码**：九成是管理员账户的 `administrators_authorized_keys` 问题，见上文
 - **LLM 不调用工具**：确认 AstrBot 已启用函数调用且当前模型支持 tools；`enable_llm_tools` 为 true
+- **bot 说看不到截图（只有文字描述）**：让模型看到工具返回的截图需要较新的 AstrBot（该机制在 4.14.6 之后加入，PyPI 渠道的 astrbot 4.14.6 及更早版本会把工具返回的图片丢弃）。请通过 GitHub Release / 官方安装器把 AstrBot 升级到 4.27+，模型需支持视觉输入，服务商模态（modalities）需包含 image。升级后用 `ssh 诊断` 验证
 - **Agent 端口冲突**：改配置全局 `agent_port`，或在主机条目的「GUI Agent 端口」字段按主机指定，重新 `ssh 代理 安装`
 
 ## 许可证
