@@ -23,6 +23,10 @@ AGENT_TASK_NAME = "AstrBotSshAgent"
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent
 WIN_AGENT_PS1 = PLUGIN_ROOT / "agent" / "win_agent.ps1"
 
+# 截图 base64 单行可达数 MB；asyncio readline 默认 64KB 行限制会抛
+# "Separator is not found, and chunk exceed the limit"，必须放大
+AGENT_LINE_LIMIT = 64 * 1024 * 1024
+
 
 class WinAgentClient:
     """绑定到一台 WindowsTarget 的 Agent 客户端。"""
@@ -71,7 +75,7 @@ class WinAgentClient:
             reader = writer = None
             try:
                 reader, writer = await asyncio.wait_for(
-                    asyncio.open_connection("127.0.0.1", local_port), 6
+                    asyncio.open_connection("127.0.0.1", local_port, limit=AGENT_LINE_LIMIT), 6
                 )
                 writer.write((payload + "\n").encode("utf-8"))
                 await writer.drain()
