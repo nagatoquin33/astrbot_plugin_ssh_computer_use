@@ -42,13 +42,24 @@ class SshTarget:
             kwargs["username"] = p.username
         if p.auth == "password":
             # asyncssh 会同时尝试 password 与 keyboard-interactive（部分 NAS 需要）
-            kwargs["password"] = p.secret or None
+            kwargs["password"] = p.password or None
             kwargs["preferred_auth"] = ("password", "keyboard-interactive", "publickey")
         else:
             kwargs["preferred_auth"] = ("publickey",)
-            if p.secret:
-                kwargs["client_keys"] = [os_path_expand(p.secret)]
-            # secret 为空 → 使用 ~/.ssh 默认密钥与 ssh-agent（免密场景）
+            client_keys: list = []
+            if p.key_content:
+                try:
+                    client_keys.append(asyncssh.import_private_key(p.key_content))
+                except asyncssh.KeyImportError as e:
+                    raise SSHConnectionError(
+                        f"主机 {p.name} 的私钥内容无法解析（{e}），"
+                        "请检查是否为完整的 PEM 私钥（以 -----BEGIN ... 开头）"
+                    ) from None
+            elif p.key_path:
+                client_keys.append(os_path_expand(p.key_path))
+            if client_keys:
+                kwargs["client_keys"] = client_keys
+            # 私钥内容与路径均为空 → 使用 ~/.ssh 默认密钥与 ssh-agent（免密场景）
         try:
             return await asyncio.wait_for(asyncssh.connect(**kwargs), self.connect_timeout)
         except asyncio.TimeoutError:

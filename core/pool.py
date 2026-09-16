@@ -9,7 +9,7 @@ from astrbot.api import logger
 from .base import SshTarget
 from .errors import SSHConnectionError
 from .linux import LinuxTarget
-from .models import HostProfile, parse_hosts_text
+from .models import HostProfile, parse_hosts_config
 from .windows import WindowsTarget
 
 
@@ -30,7 +30,7 @@ class ConnectionPool:
         self.reload()
 
     def reload(self):
-        self._profiles = parse_hosts_text(self.cfg.get("hosts_text", ""))
+        self._profiles = parse_hosts_config(self.cfg)
         if not self._profiles:
             logger.warning("[ssh_computer_use] 尚未配置任何 SSH 主机")
 

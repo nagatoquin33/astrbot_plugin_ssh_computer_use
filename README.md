@@ -26,27 +26,25 @@
    https://github.com/nagatoquin33/astrbot_plugin_ssh_computer_use
    ```
 2. 依赖 `asyncssh` 会随 `requirements.txt` 自动安装；
-3. 在 WebUI 插件配置中填写 `hosts_text`（主机清单）。
+3. 在 WebUI 插件配置中添加主机（「SSH 主机配置列表」→ 添加条目）。
 
-### hosts_text 格式（一行一台）
+## 主机配置（WebUI 结构化列表，推荐）
 
-```
-名称 | windows|linux | 用户名 | key|password | 地址 | 端口 | 密码或私钥路径 [ | Agent端口 ]
-```
+在插件配置的「SSH 主机配置列表」中点 **添加条目**，每台主机一张卡片，字段独立填写：
 
-示例（含免密写法）：
+| 字段 | 说明 |
+|------|------|
+| 主机名称 | 唯一标识，例如 `laptop`，聊天中用 `ssh 使用 <名称>` 切换 |
+| 系统类型 | `windows` / `linux` |
+| 地址 / 端口 | 服务器 IP 或域名，端口默认 22 |
+| SSH 用户名 | 留空使用 SSH 默认行为（bot 当前用户或 `~/.ssh/config`） |
+| 认证方式 | `key`（密钥免密，推荐）/ `password` |
+| SSH 密码 | password 认证时填写 |
+| 私钥路径 | key 认证时可选：bot 主机上的私钥文件（支持 `~` 展开）；留空使用 `~/.ssh/` 默认密钥与 ssh-agent |
+| 私钥内容 | 可选：直接粘贴 PEM 私钥（`-----BEGIN` 开头），优先于私钥路径 |
+| GUI Agent 端口 | 仅 Windows 需要；0 表示使用全局默认端口 |
 
-```
-laptop | windows | | key | 192.168.1.20 | 22 |
-nas    | linux   | admin | password | 100.100.1.5 | 22 | MyPassword123
-```
-
-**无密码/免密兼容**：
-
-- `key` 认证最后一列**留空** → 使用 bot 主机 `~/.ssh/` 下默认密钥与 ssh-agent（局域网免密推荐写法）；填路径则使用指定私钥（支持 `~` 展开）
-- `password` 认证最后一列**留空** → 以空密码尝试（个别内网设备允许）
-- 用户名列**留空** → 交由 SSH 默认行为（bot 当前用户或 `~/.ssh/config` 中的配置，asyncssh 会自动读取该文件）
-- `#` 开头的行为注释；第 8 列可选，覆盖该主机的 GUI Agent 端口
+列表留空时回退到旧版 `hosts_text` 多行配置（兼容保留，一行一台：`名称 | windows\|linux | 用户名 | key\|password | 地址 | 端口 | 密码或私钥路径 [| Agent端口]`，`#` 开头为注释），老配置无需迁移即可继续使用。
 
 ## 项目结构
 
@@ -56,7 +54,7 @@ astrbot_plugin_ssh_computer_use/
 ├── prompts.py           # 文案：帮助文本 / LLM 系统提示注入
 ├── core/                # 核心逻辑
 │   ├── errors.py        #   异常类型
-│   ├── models.py        #   数据模型 + hosts_text 解析 + 解码工具
+│   ├── models.py        #   数据模型 + 主机配置解析 + 解码工具
 │   ├── base.py          #   SshTarget 基类（连接/SFTP/重试）
 │   ├── windows.py       #   Windows 目标机（.bat/.ps1 文件执行）
 │   ├── agent_client.py  #   Windows GUI Agent 客户端（JSON over SSH 转发）
@@ -129,7 +127,7 @@ ssh 代理 安装|状态|重启
 - **截图全黑/失败**：目标机锁屏或无人登录，Agent 未在交互会话中运行；解锁后 `ssh 代理 状态` 检查
 - **免密配置后仍要密码**：九成是管理员账户的 `administrators_authorized_keys` 问题，见上文
 - **LLM 不调用工具**：确认 AstrBot 已启用函数调用且当前模型支持 tools；`enable_llm_tools` 为 true
-- **Agent 端口冲突**：改配置 `agent_port`，或在 hosts_text 第 8 列按主机指定，重新 `ssh 代理 安装`
+- **Agent 端口冲突**：改配置全局 `agent_port`，或在主机条目的「GUI Agent 端口」字段按主机指定，重新 `ssh 代理 安装`
 
 ## 许可证
 

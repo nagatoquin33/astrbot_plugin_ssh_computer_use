@@ -1,15 +1,89 @@
 {
-  "hosts_text": {
-    "type": "text",
-    "description": "SSH 主机列表，一行一台主机，字段用 | 分隔：名称 | 系统类型(windows/linux) | 用户名 | 认证方式(key/password) | 地址 | 端口 | 密码或私钥路径。以 # 开头的行为注释。",
-    "hint": "无密码/免密写法：\n① key 认证最后一列留空 → 使用 bot 主机 ~/.ssh/ 默认密钥或 ssh-agent（推荐，局域网免密）；\n② 密码列留空的 password 主机 → 以空密码尝试；\n③ 用户名列留空 → 使用 SSH 默认用户（或 ~/.ssh/config 配置）。\n示例：\nlaptop | windows | | key | 192.168.1.20 | 22 |\nnas | linux | admin | password | 100.100.1.5 | 22 | MyPassword123",
+  "hosts": {
+    "type": "template_list",
+    "description": "SSH 主机配置列表（推荐）：每条配置一个名称，可在聊天中用 ssh use <名称> 切换",
+    "hint": "列表留空时继续使用下方旧版 hosts_text 配置；填写后每个条目都可独立连接",
     "obvious_hint": true,
-    "default": "laptop | windows | | key | 192.168.1.20 | 22 |\nnas | linux | 你的用户名 | password | 100.100.1.5 | 22 | 你的密码"
+    "templates": {
+      "host": {
+        "name": "主机",
+        "hint": "一台 SSH 远程主机",
+        "items": {
+          "name": {
+            "type": "string",
+            "description": "主机名称",
+            "hint": "唯一标识，例如 laptop；聊天中用 ssh 使用 <名称> 切换"
+          },
+          "os_type": {
+            "type": "string",
+            "description": "系统类型",
+            "options": ["windows", "linux"],
+            "default": "windows"
+          },
+          "host": {
+            "type": "string",
+            "description": "地址",
+            "hint": "服务器 IP 或域名，例如 192.168.1.114"
+          },
+          "port": {
+            "type": "int",
+            "description": "SSH 端口",
+            "hint": "默认一般为 22",
+            "default": 22
+          },
+          "username": {
+            "type": "string",
+            "description": "SSH 用户名",
+            "hint": "留空使用 SSH 默认行为（bot 当前用户或 ~/.ssh/config）"
+          },
+          "auth": {
+            "type": "string",
+            "description": "认证方式",
+            "options": ["key", "password"],
+            "default": "key",
+            "hint": "key=密钥免密（推荐）；password=密码"
+          },
+          "password": {
+            "type": "string",
+            "description": "SSH 密码",
+            "hint": "password 认证时填写（明文存储，请注意安全；key 认证可不填）",
+            "default": ""
+          },
+          "key_path": {
+            "type": "string",
+            "description": "私钥路径",
+            "hint": "key 认证时可选：bot 主机上的私钥文件路径（支持 ~ 展开）；留空使用 ~/.ssh/ 默认密钥与 ssh-agent",
+            "default": ""
+          },
+          "key_content": {
+            "type": "text",
+            "description": "私钥内容",
+            "hint": "可选：直接粘贴 PEM 私钥（以 -----BEGIN 开头），填写后优先于私钥路径",
+            "default": ""
+          },
+          "agent_port": {
+            "type": "int",
+            "description": "GUI Agent 端口",
+            "hint": "仅 Windows 主机需要；0 表示使用全局默认端口",
+            "default": 0
+          }
+        }
+      }
+    },
+    "default": []
   },
   "default_host": {
     "type": "string",
-    "description": "默认主机名称（未用 `ssh 使用 <名称>` 切换时生效）",
+    "description": "默认 SSH 主机名称（未用 `ssh 使用 <名称>` 切换时生效）",
+    "hint": "留空使用列表中的第一台主机；主机列表为空时使用旧版配置",
     "default": "laptop"
+  },
+  "hosts_text": {
+    "type": "text",
+    "description": "旧版多行主机配置（兼容保留；推荐改用上方主机列表）",
+    "hint": "仅当上方主机列表为空时生效。一行一台主机，字段用 | 分隔：名称 | 系统类型(windows/linux) | 用户名 | 认证方式(key/password) | 地址 | 端口 | 密码或私钥路径 [ | Agent端口 ]。以 # 开头的行为注释。",
+    "obvious_hint": true,
+    "default": "laptop | windows | | key | 192.168.1.20 | 22 |\nnas | linux | 你的用户名 | password | 100.100.1.5 | 22 | 你的密码"
   },
   "admin_only": {
     "type": "bool",
