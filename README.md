@@ -1,5 +1,9 @@
 # astrbot_plugin_ssh_computer_use
 
+<div align="center">
+  <img src="logo.png" width="128" alt="SSH Computer Use logo"/>
+</div>
+
 基于 **SSH** 的 AstrBot 全平台远程计算机操控插件。让 bot 稳定、顺畅地操控你的 Windows 笔记本、Linux 主机与飞牛 NAS（fnOS）——执行命令、收发文件、截屏、键鼠控制，一句话搞定 computer use。
 
 ## 它解决什么问题
