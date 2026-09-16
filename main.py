@@ -28,7 +28,7 @@ PLUGIN_NAME = "astrbot_plugin_ssh_computer_use"
     PLUGIN_NAME,
     "nagatoquin33",
     "基于 SSH 的全平台远程计算机操控：命令/文件/截图/键鼠，Windows 与 Linux 通用",
-    "v0.2.0",
+    "v0.2.1",
     "https://github.com/nagatoquin33/astrbot_plugin_ssh_computer_use",
 )
 class SshComputerUsePlugin(Star):
@@ -43,11 +43,22 @@ class SshComputerUsePlugin(Star):
     # ---------------- 生命周期 ----------------
 
     async def initialize(self):
+        import asyncssh
+
         data_dir = StarTools.get_data_dir(PLUGIN_NAME)
         self.shot_dir = data_dir / "screenshots"
         self.down_dir = data_dir / "downloads"
         self.shot_dir.mkdir(parents=True, exist_ok=True)
         self.down_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            if tuple(int(x) for x in asyncssh.__version__.split(".")[:2]) < (2, 14):
+                logger.error(
+                    f"[{PLUGIN_NAME}] asyncssh 版本过旧（{asyncssh.__version__}，需 >=2.14），"
+                    "SFTP 与文件传输功能不可用。请在 bot 所在主机的 AstrBot Python 环境中执行 "
+                    "pip install -U asyncssh 后重启 AstrBot"
+                )
+        except (AttributeError, ValueError):
+            pass
         if self.config.get("enable_llm_tools", True):
             self.context.add_llm_tools(*build_tools(self))
             logger.info(f"[{PLUGIN_NAME}] LLM 工具已注册，主机：{self.pool.profile_names or '无'}")
