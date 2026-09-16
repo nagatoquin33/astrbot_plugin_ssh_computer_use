@@ -84,15 +84,16 @@ class SshTarget:
             if self._conn is None:
                 self._conn = await self._new_conn()
             if self._sftp is None:
-                starter = getattr(self._conn, "start_sftp", None)
-                if starter is None:
+                # 兼容不同代 asyncssh：新版叫 start_sftp_client，旧版叫 start_sftp
+                opener = getattr(self._conn, "start_sftp_client", None) or getattr(
+                    self._conn, "start_sftp", None
+                )
+                if opener is None:
                     raise SSHConnectionError(
-                        f"bot 环境的 asyncssh 版本过旧"
-                        f"（{getattr(asyncssh, '__version__', '未知')}，需 >=2.14），"
-                        "缺少 SFTP 支持。请在 bot 所在主机的 AstrBot Python 环境中执行 "
-                        "pip install -U asyncssh 后重启 AstrBot"
+                        "当前环境 asyncssh 不支持 SFTP 客户端 API（既无 start_sftp_client "
+                        "也无 start_sftp），请安装 asyncssh>=2.14 后重启 AstrBot"
                     )
-                self._sftp = await starter()
+                self._sftp = await opener()
             return self._sftp
 
     async def _reset(self):

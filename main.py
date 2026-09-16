@@ -28,7 +28,7 @@ PLUGIN_NAME = "astrbot_plugin_ssh_computer_use"
     PLUGIN_NAME,
     "nagatoquin33",
     "基于 SSH 的全平台远程计算机操控：命令/文件/截图/键鼠，Windows 与 Linux 通用",
-    "v0.2.1",
+    "v0.2.2",
     "https://github.com/nagatoquin33/astrbot_plugin_ssh_computer_use",
 )
 class SshComputerUsePlugin(Star):
@@ -51,11 +51,14 @@ class SshComputerUsePlugin(Star):
         self.shot_dir.mkdir(parents=True, exist_ok=True)
         self.down_dir.mkdir(parents=True, exist_ok=True)
         try:
-            if tuple(int(x) for x in asyncssh.__version__.split(".")[:2]) < (2, 14):
+            has_sftp_api = hasattr(asyncssh.SSHClientConnection, "start_sftp_client") or hasattr(
+                asyncssh.SSHClientConnection, "start_sftp"
+            )
+            logger.info(f"[{PLUGIN_NAME}] asyncssh {asyncssh.__version__}")
+            if not has_sftp_api:
                 logger.error(
-                    f"[{PLUGIN_NAME}] asyncssh 版本过旧（{asyncssh.__version__}，需 >=2.14），"
-                    "SFTP 与文件传输功能不可用。请在 bot 所在主机的 AstrBot Python 环境中执行 "
-                    "pip install -U asyncssh 后重启 AstrBot"
+                    f"[{PLUGIN_NAME}] 当前 asyncssh（{asyncssh.__version__}）不支持 SFTP 客户端 API，"
+                    "文件传输功能不可用。请安装 asyncssh>=2.14 后重启 AstrBot"
                 )
         except (AttributeError, ValueError):
             pass
