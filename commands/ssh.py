@@ -27,6 +27,7 @@ _ALIASES = {
     "上传": "up", "up": "up", "upload": "up",
     "下载": "down", "down": "down", "download": "down",
     "代理": "agent", "agent": "agent",
+    "诊断": "diag", "diag": "diag", "doctor": "diag",
 }
 
 
@@ -85,6 +86,80 @@ async def _extract_file(event) -> tuple[str | None, object | None]:
     except Exception as e:
         logger.warning(f"[ssh_computer_use] 提取消息文件失败：{e}")
         return None, comp
+
+
+def _run_diag(plugin) -> str:
+    """收集图片链路诊断信息：AstrBot 版本、工具图片缓存、模型模态配置。"""
+    lines = ["🔬 图片链路诊断"]
+
+    # 1. AstrBot 版本
+    try:
+        import astrbot as _ab
+
+        lines.append(f"· AstrBot 版本：{_ab.__version__}")
+    except Exception as e:
+        lines.append(f"· AstrBot 版本：获取失败（{e}）")
+
+    # 2. 工具图片缓存机制是否存在（较新版本才有）
+    cache_dir = None
+    try:
+        from astrbot.core.agent.tool_image_cache import tool_image_cache
+
+        lines.append("· 工具图片缓存机制：存在（tool_image_cache）")
+        cache_dir = tool_image_cache._cache_dir
+    except Exception:
+        lines.append(
+            "· 工具图片缓存机制：不存在 → 当前 AstrBot 版本过旧，"
+            "工具返回的截图无法进入模型输入，请升级 AstrBot"
+        )
+
+    # 3. 最近被框架缓存的工具图片（判断上次截图是否真的进了链路）
+    if cache_dir:
+        try:
+            import time as _time
+
+            files = sorted(
+                (Path(cache_dir).glob("*")),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )[:5]
+            if files:
+                now = _time.time()
+                lines.append("· 最近缓存的工具图片（截图后应有新文件）：")
+                for p in files:
+                    age = int(now - p.stat().st_mtime)
+                    lines.append(f"    - {p.name}（{age} 秒前，{p.stat().st_size} 字节）")
+            else:
+                lines.append(
+                    "· 最近缓存的工具图片：缓存目录为空 → "
+                    "截图从未被框架缓存（版本过旧或缓存写入失败）"
+                )
+        except Exception as e:
+            lines.append(f"· 缓存目录读取失败：{e}")
+
+    # 4. 各文本模型的模态配置（modalities 不含 image 时工具图片会被丢弃）
+    try:
+        providers = plugin.context.get_all_providers()
+        if not providers:
+            lines.append("· 文本模型：未配置")
+        for p in providers:
+            try:
+                m = p.meta()
+                mods = (p.provider_config or {}).get("modalities", None)
+                mod_str = "未配置（默认支持图片）" if not mods else "、".join(mods)
+                warn = (
+                    ""
+                    if (not mods or "image" in mods)
+                    else "  ⚠️ 未包含 image，工具截图不会进入该模型的输入！"
+                )
+                lines.append(f"· 文本模型：{m.id}（{m.type}，{m.model}）模态：{mod_str}{warn}")
+            except Exception as e:
+                lines.append(f"· 文本模型信息读取失败：{e}")
+    except Exception as e:
+        lines.append(f"· 模型列表获取失败：{e}")
+
+    lines.append("→ 若以上有 ⚠️ 或「不存在/为空」，按提示处理后重试截图即可。")
+    return "\n".join(lines)
 
 
 async def run_ssh_command(plugin, event):
@@ -270,3 +345,6 @@ async def run_ssh_command(plugin, event):
             yield event.plain_result(f"✅ {await target.agent_restart()}")
         else:
             yield event.plain_result(await target.agent_status())
+
+    elif action == "diag":
+        yield event.plain_result(_run_diag(plugin))
