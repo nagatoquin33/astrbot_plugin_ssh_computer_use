@@ -21,7 +21,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$AgentVersion = 1
+$AgentVersion = 2
 
 $LogDir = Join-Path $env:USERPROFILE '.sshbot'
 $LogFile = Join-Path $LogDir 'agent.log'
@@ -423,6 +423,11 @@ function Invoke-Op {
     $op = [string]$Req.op
     $data = $null
 
+    # LLM 直连协议时的常见自创 op 名 → 规范化，避免误用直接失败
+    if ($op -eq 'double_click') { $op = 'click'; $Req | Add-Member -NotePropertyName double -NotePropertyValue $true -Force }
+    elseif ($op -eq 'single_click' -or $op -eq 'left_click') { $op = 'click' }
+    elseif ($op -eq 'key_press' -or $op -eq 'press_key') { $op = 'key' }
+
     switch ($op) {
         'ping' { $data = @{ pong = $true; version = $AgentVersion } }
         'info' { $data = Get-Info }
@@ -453,11 +458,13 @@ function Invoke-Op {
             if ($dbl) {
                 for ($i = 0; $i -lt 2; $i++) {
                     Send-MouseFlag $downF
+                    Start-Sleep -Milliseconds 40
                     Send-MouseFlag $upF
-                    if ($i -eq 0) { Start-Sleep -Milliseconds 60 }
+                    if ($i -eq 0) { Start-Sleep -Milliseconds 120 }
                 }
             } else {
                 Send-MouseFlag $downF
+                Start-Sleep -Milliseconds 40
                 Send-MouseFlag $upF
             }
             $data = @{ x = $x; y = $y; button = $button; double = $dbl }

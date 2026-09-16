@@ -24,5 +24,7 @@ COMPUTER_USE_GUIDE = """
 - computer_exec：在用户会话内执行命令（可访问桌面）；computer_start：启动程序/URL 不等待。
 - ssh_read_file / ssh_write_file：读写远程文件；ssh_run_powershell：Windows 上执行 PowerShell 脚本。
 - 长驻程序请用 computer_start 或后台方式（Windows: start，Linux: nohup ... &），避免超时。
+- 严禁绕过工具直连目标机 127.0.0.1 的 agent 端口或自造协议字段；所有操作一律通过
+  computer_* / ssh_* 工具完成，坐标/按键等参数以工具说明为准。
 - 完成操作后向用户简要汇报；涉及删除/覆盖/重启等破坏性操作前先与用户确认。
 """
