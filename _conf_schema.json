@@ -1,0 +1,96 @@
+{
+  "hosts_text": {
+    "type": "text",
+    "description": "SSH 主机列表，一行一台主机，字段用 | 分隔：名称 | 系统类型(windows/linux) | 用户名 | 认证方式(key/password) | 地址 | 端口 | 密码或私钥路径。以 # 开头的行为注释。",
+    "hint": "无密码/免密写法：\n① key 认证最后一列留空 → 使用 bot 主机 ~/.ssh/ 默认密钥或 ssh-agent（推荐，局域网免密）；\n② 密码列留空的 password 主机 → 以空密码尝试；\n③ 用户名列留空 → 使用 SSH 默认用户（或 ~/.ssh/config 配置）。\n示例：\nlaptop | windows | | key | 192.168.1.20 | 22 |\nnas | linux | admin | password | 100.100.1.5 | 22 | MyPassword123",
+    "obvious_hint": true,
+    "default": "laptop | windows | | key | 192.168.1.20 | 22 |\nnas | linux | 你的用户名 | password | 100.100.1.5 | 22 | 你的密码"
+  },
+  "default_host": {
+    "type": "string",
+    "description": "默认主机名称（未用 `ssh 使用 <名称>` 切换时生效）",
+    "default": "laptop"
+  },
+  "admin_only": {
+    "type": "bool",
+    "description": "仅管理员可使用本插件的命令与工具",
+    "default": true
+  },
+  "allowed_users": {
+    "type": "list",
+    "description": "额外的允许使用者 ID 列表（admin_only 为 true 时同样生效）",
+    "default": []
+  },
+  "exec_timeout": {
+    "type": "int",
+    "description": "远程命令默认超时（秒）",
+    "default": 60
+  },
+  "connect_timeout": {
+    "type": "int",
+    "description": "SSH 连接超时（秒）",
+    "default": 15
+  },
+  "max_output_chars": {
+    "type": "int",
+    "description": "回传给 LLM / 聊天的命令输出最大字符数",
+    "default": 4000
+  },
+  "screenshot_max_width": {
+    "type": "int",
+    "description": "截图最长边缩放宽度（像素），0 为不缩放",
+    "default": 1280
+  },
+  "screenshot_format": {
+    "type": "string",
+    "description": "截图格式",
+    "options": ["jpeg", "png"],
+    "default": "jpeg"
+  },
+  "screenshot_quality": {
+    "type": "int",
+    "description": "JPEG 截图质量（1-100）",
+    "default": 80
+  },
+  "send_screenshot_to_chat": {
+    "type": "bool",
+    "description": "LLM 截图时同时把图片发送到聊天中供用户直接查看",
+    "default": true
+  },
+  "agent_port": {
+    "type": "int",
+    "description": "Windows GUI Agent 默认监听端口（目标机本机 127.0.0.1）",
+    "default": 7622
+  },
+  "enable_llm_tools": {
+    "type": "bool",
+    "description": "注册 LLM 函数工具（让 AI 自主操控远程计算机）",
+    "default": true
+  },
+  "computer_use_prompt": {
+    "type": "bool",
+    "description": "在 LLM 请求中自动注入 computer use 使用指南",
+    "default": true
+  },
+  "linux_gui_env": {
+    "type": "string",
+    "description": "Linux GUI 会话环境变量（如 DISPLAY=:0 XAUTHORITY=/home/x/.Xauthority），留空则自动探测",
+    "default": ""
+  },
+  "linux_screenshot_cmd": {
+    "type": "string",
+    "description": "自定义 Linux 截图命令，{} 会被替换为输出文件路径；留空则自动尝试 grim/gnome-screenshot/scrot/maim/import/spectacle",
+    "default": ""
+  },
+  "linux_input_backend": {
+    "type": "string",
+    "description": "Linux 键鼠注入后端",
+    "options": ["auto", "xdotool", "ydotool", "wtype"],
+    "default": "auto"
+  },
+  "blocked_patterns": {
+    "type": "list",
+    "description": "命令黑名单（正则，逐条匹配则拒绝执行），如 rm\\s+-rf\\s+/",
+    "default": []
+  }
+}
