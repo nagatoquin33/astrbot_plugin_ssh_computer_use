@@ -33,7 +33,11 @@ class WindowsTarget(SshTarget):
         if self._home:
             return self._home
         sftp = await self._get_sftp()
-        home = await sftp.normalize(".")  # 形如 /C:/Users/admin 或 C:/Users/admin
+        # SFTP REALPATH 解析家目录；normalize 是 paramiko 的 API，asyncssh 里叫 realpath
+        canon = getattr(sftp, "realpath", None) or getattr(sftp, "normalize", None)
+        if canon is None:
+            raise SSHConnectionError("当前 asyncssh 的 SFTPClient 不支持路径解析 API，请升级 asyncssh")
+        home = await canon(".")
         home = home.replace("\\", "/").rstrip("/")
         self._home = home
         return home
