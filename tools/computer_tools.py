@@ -50,6 +50,35 @@ class ComputerScreenshotTool(_SshToolBase):
                 logger.warning(f"[ssh_computer_use] 截图发送到聊天失败：{e}")
 
         mime = "image/png" if str(cfg.get("screenshot_format", "jpeg")) == "png" else "image/jpeg"
+        b64 = base64.b64encode(shot.data).decode("ascii")
+
+        # 直接把截图塞进本轮工具循环的消息上下文（与 runner 自己附加工具图片的
+        # 消息形态一致，走已验证可用的入站图片序列化通道），不依赖宿主对
+        # CallToolResult.ImageContent 的处理；失败则挂起，由 on_llm_request
+        # 钩子在下一轮经 extra_user_content_parts 文档通道补发。
+        try:
+            from astrbot.core.agent.message import ImageURLPart, Message, TextPart
+
+            context.messages.append(
+                Message(
+                    role="user",
+                    content=[
+                        TextPart(
+                            text=f"「{target.profile.name}」的实时屏幕截图（{shot.width}x{shot.height}）："
+                        ),
+                        ImageURLPart(
+                            image_url=ImageURLPart.ImageURL(
+                                url=f"data:{mime};base64,{b64}", id=str(path)
+                            )
+                        ),
+                    ],
+                )
+            )
+            self.plugin._pending_shot = None
+        except Exception as e:
+            logger.debug(f"[ssh_computer_use] 截图直接注入上下文失败，回退 CallToolResult 通道：{e}")
+            self.plugin._pending_shot = (str(path), mime, b64)
+
         return mcp_types.CallToolResult(
             content=[
                 mcp_types.TextContent(
@@ -58,7 +87,7 @@ class ComputerScreenshotTool(_SshToolBase):
                 ),
                 mcp_types.ImageContent(
                     type="image",
-                    data=base64.b64encode(shot.data).decode("ascii"),
+                    data=b64,
                     mimeType=mime,
                 ),
             ]

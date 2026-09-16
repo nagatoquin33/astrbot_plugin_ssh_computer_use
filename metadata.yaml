@@ -1,7 +1,7 @@
 name: astrbot_plugin_ssh_computer_use
 display_name: SSH Computer Use
 desc: 基于 SSH 的全平台远程计算机操控。执行命令、收发文件、截图与键鼠控制，Windows/Linux 通用，让 bot 顺畅完成 computer use。
-version: v0.2.9
+version: v0.2.10
 author: nagatoquin33
 repo: https://github.com/nagatoquin33/astrbot_plugin_ssh_computer_use
 astrbot_version: ">=4.5.7"
