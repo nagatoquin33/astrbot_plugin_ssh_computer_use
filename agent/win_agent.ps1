@@ -21,7 +21,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$AgentVersion = 2
+$AgentVersion = 3
 
 $LogDir = Join-Path $env:USERPROFILE '.sshbot'
 $LogFile = Join-Path $LogDir 'agent.log'
@@ -162,7 +162,7 @@ function Send-MouseWheel {
 }
 
 function Send-VK {
-    param([ushort]$Vk, [bool]$Up = $false, [bool]$Extended = $false)
+    param([uint16]$Vk, [bool]$Up = $false, [bool]$Extended = $false)
     $inp = New-Object 'SshBotNative+INPUT'
     $inp.type = [SshBotNative]::INPUT_KEYBOARD
     $inp.U.ki.wVk = $Vk
@@ -213,17 +213,17 @@ function Resolve-Key {
     $k = $Name.Trim().ToLower()
     if ($k.Length -eq 0) { return $null }
     if ($VkMap.ContainsKey($k)) {
-        return @{ vk = [ushort]$VkMap[$k]; extended = ($ExtendedKeys -contains $k); shift = $false }
+        return @{ vk = [uint16]$VkMap[$k]; extended = ($ExtendedKeys -contains $k); shift = $false }
     }
     if ($k.Length -eq 1) {
         $scan = [SshBotNative]::VkKeyScanW($k[0])
         if ($scan -ne -1) {
-            $vk = [ushort]($scan -band 0xFF)
+            $vk = [uint16]($scan -band 0xFF)
             $state = (($scan -band 0xFF00) -shr 8)
             return @{ vk = $vk; extended = $false; shift = (($state -band 1) -ne 0) }
         }
         # 找不到键盘映射时退化为 UNICODE 扫描码
-        return @{ unicode = [ushort][int]($k[0]) }
+        return @{ unicode = [uint16][int]($k[0]) }
     }
     return $null
 }
@@ -245,12 +245,12 @@ function Invoke-KeyPress {
     $mainResolved = Resolve-Key $main
     if ($null -eq $mainResolved) { throw "无法识别按键: $main" }
 
-    foreach ($m in $mods) { Send-VK ([ushort]$VkMap[$m]) $false $false }
+    foreach ($m in $mods) { Send-VK ([uint16]$VkMap[$m]) $false $false }
 
     if ($mainResolved.ContainsKey('unicode')) {
         $inp = New-Object 'SshBotNative+INPUT'
         $inp.type = [SshBotNative]::INPUT_KEYBOARD
-        $inp.U.ki.wScan = [ushort]$mainResolved['unicode']
+        $inp.U.ki.wScan = [uint16]$mainResolved['unicode']
         $inp.U.ki.dwFlags = [SshBotNative]::KEYEVENTF_UNICODE
         $arr = New-InputArray 1
         $arr[0] = $inp
@@ -260,13 +260,13 @@ function Invoke-KeyPress {
         Send-Inputs $arr
     } else {
         if ($mainResolved['shift']) { Send-VK 0x10 $false $false }
-        Send-VK ([ushort]$mainResolved['vk']) $false ([bool]$mainResolved['extended'])
-        Send-VK ([ushort]$mainResolved['vk']) $true ([bool]$mainResolved['extended'])
+        Send-VK ([uint16]$mainResolved['vk']) $false ([bool]$mainResolved['extended'])
+        Send-VK ([uint16]$mainResolved['vk']) $true ([bool]$mainResolved['extended'])
         if ($mainResolved['shift']) { Send-VK 0x10 $true $false }
     }
 
     [array]::Reverse($mods)
-    foreach ($m in $mods) { Send-VK ([ushort]$VkMap[$m]) $true $false }
+    foreach ($m in $mods) { Send-VK ([uint16]$VkMap[$m]) $true $false }
 }
 
 function Send-Text {
@@ -280,12 +280,12 @@ function Send-Text {
         }
         $down = New-Object 'SshBotNative+INPUT'
         $down.type = [SshBotNative]::INPUT_KEYBOARD
-        $down.U.ki.wScan = [ushort][int]$ch
+        $down.U.ki.wScan = [uint16][int]$ch
         $down.U.ki.dwFlags = [SshBotNative]::KEYEVENTF_UNICODE
 
         $up = New-Object 'SshBotNative+INPUT'
         $up.type = [SshBotNative]::INPUT_KEYBOARD
-        $up.U.ki.wScan = [ushort][int]$ch
+        $up.U.ki.wScan = [uint16][int]$ch
         $up.U.ki.dwFlags = [SshBotNative]::KEYEVENTF_UNICODE -bor [SshBotNative]::KEYEVENTF_KEYUP
 
         $arr = New-InputArray 2
