@@ -28,7 +28,7 @@ PLUGIN_NAME = "astrbot_plugin_ssh_computer_use"
     PLUGIN_NAME,
     "nagatoquin33",
     "基于 SSH 的全平台远程计算机操控：命令/文件/截图/键鼠，Windows 与 Linux 通用",
-    "v0.3.0",
+    "v0.3.1",
     "https://github.com/nagatoquin33/astrbot_plugin_ssh_computer_use",
 )
 class SshComputerUsePlugin(Star):
@@ -39,8 +39,6 @@ class SshComputerUsePlugin(Star):
         self.pool = ConnectionPool(config)
         self.shot_dir: Path = Path(".")
         self.down_dir: Path = Path(".")
-        # 上一轮未能注入模型上下文的截图（路径, mime, base64），由 on_llm_request 补发
-        self._pending_shot: tuple[str, str, str] | None = None
 
     # ---------------- 生命周期 ----------------
 
@@ -93,32 +91,6 @@ class SshComputerUsePlugin(Star):
         )
         path.write_bytes(data)
         return path
-
-    # ---------------- LLM 请求钩子 ----------------
-
-    @filter.on_llm_request()
-    async def inject_pending_screenshot(self, event: AstrMessageEvent, req):
-        """补发上一轮未成功进入模型上下文的截图（文档通道：extra_user_content_parts）。"""
-        if not self.config.get("enable_llm_tools", True):
-            return
-        pending = self._pending_shot
-        if pending:
-            try:
-                from astrbot.core.agent.message import ImageURLPart
-
-                path, mime, b64 = pending
-                part = ImageURLPart(
-                    image_url=ImageURLPart.ImageURL(
-                        url=f"data:{mime};base64,{b64}", id=path
-                    )
-                )
-                if hasattr(part, "mark_as_temp"):
-                    part.mark_as_temp()  # 仅参与本轮请求，不写入历史
-                req.extra_user_content_parts.append(part)
-                self._pending_shot = None
-                logger.info(f"[{PLUGIN_NAME}] 已补发上轮截图进模型输入：{path}")
-            except Exception as e:
-                logger.warning(f"[{PLUGIN_NAME}] 补发截图失败：{e}")
 
     # ---------------- 聊天命令 ----------------
 

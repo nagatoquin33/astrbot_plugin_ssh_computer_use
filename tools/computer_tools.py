@@ -55,8 +55,7 @@ class ComputerScreenshotTool(_SshToolBase):
 
         # 直接把截图塞进本轮工具循环的消息上下文（与 runner 自己附加工具图片的
         # 消息形态一致，走已验证可用的入站图片序列化通道），不依赖宿主对
-        # CallToolResult.ImageContent 的处理；失败则挂起，由 on_llm_request
-        # 钩子在下一轮经 extra_user_content_parts 文档通道补发。
+        # CallToolResult.ImageContent 的处理；宿主过旧时静默跳过。
         try:
             from astrbot.core.agent.message import ImageURLPart, Message, TextPart
 
@@ -75,10 +74,8 @@ class ComputerScreenshotTool(_SshToolBase):
                     ],
                 )
             )
-            self.plugin._pending_shot = None
         except Exception as e:
-            logger.debug(f"[ssh_computer_use] 截图直接注入上下文失败，回退 CallToolResult 通道：{e}")
-            self.plugin._pending_shot = (str(path), mime, b64)
+            logger.debug(f"[ssh_computer_use] 截图注入上下文跳过：{e}")
 
         return mcp_types.CallToolResult(
             content=[
