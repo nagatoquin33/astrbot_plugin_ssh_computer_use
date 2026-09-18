@@ -17,8 +17,9 @@ from .base import MessageChain, Image, _SshToolBase, _schema, png_size
 class ComputerScreenshotTool(_SshToolBase):
     name: str = "computer_screenshot"
     description: str = (
-        "截取当前远程主机的屏幕画面。返回的图像坐标可直接用于 computer_click / computer_move（自动换算为屏幕坐标）。"
-        "操作 GUI 前后都应截图确认状态。"
+        "截取当前远程主机的屏幕画面，图像会直接注入你的视觉输入。"
+        "返回的图像坐标可直接用于 computer_click / computer_move（自动换算为屏幕坐标）。"
+        "操作 GUI 前后都应截图确认状态；窗口移动或分辨率变化后必须重新截图。"
     )
     parameters: dict = Field(default_factory=lambda: _schema({}))
 
@@ -200,6 +201,7 @@ class ComputerExecTool(_SshToolBase):
     description: str = (
         "在远程主机的交互式用户会话内执行命令（与 ssh_exec 的区别：可访问桌面、启动 GUI 程序）。"
         "Windows 走 cmd（如 tasklist | findstr chrome）；Linux 走 bash。"
+        "涉及删除/覆盖/重启等破坏性操作前先向用户确认。"
     )
     parameters: dict = Field(
         default_factory=lambda: _schema(
@@ -224,7 +226,10 @@ class ComputerExecTool(_SshToolBase):
 @dataclass
 class ComputerStartTool(_SshToolBase):
     name: str = "computer_start"
-    description: str = "在远程主机上启动一个程序或打开一个文件（不等待其退出），如 notepad、calc、https://example.com。"
+    description: str = (
+        "在远程主机上启动一个程序或打开一个文件（不等待其退出），如 notepad、calc、https://example.com。"
+        "启动 GUI 程序、URL、长驻程序一律用本工具而非 ssh_exec，避免命令超时。"
+    )
     parameters: dict = Field(
         default_factory=lambda: _schema(
             {"command": {"type": "string", "description": "程序/文件/URL"}}, ["command"]

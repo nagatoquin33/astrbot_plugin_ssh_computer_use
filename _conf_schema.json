@@ -141,11 +141,6 @@
     "description": "注册 LLM 函数工具（让 AI 自主操控远程计算机）",
     "default": true
   },
-  "computer_use_prompt": {
-    "type": "bool",
-    "description": "在 LLM 请求中自动注入 computer use 使用指南",
-    "default": true
-  },
   "linux_gui_env": {
     "type": "string",
     "description": "Linux GUI 会话环境变量（如 DISPLAY=:0 XAUTHORITY=/home/x/.Xauthority），留空则自动探测",

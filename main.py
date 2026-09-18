@@ -6,8 +6,9 @@
 - core/     连接管理、平台抽象、Windows GUI Agent 客户端
 - tools/    LLM 函数工具（dataclass 模式）
 - commands/ 聊天命令解析与分发
-- prompts.py 文案（帮助文本 / LLM 系统提示注入）
+- prompts.py 文案（帮助文本）
 - agent/    部署到 Windows 目标机的 win_agent.ps1
+- skills/   随插件提供的 GUI 操控指南 Skill
 """
 
 from pathlib import Path
@@ -18,7 +19,6 @@ from astrbot.api.star import Context, Star, StarTools, register
 
 from .commands import run_ssh_command
 from .core import AgentError, ConnectionPool, SSHConnectionError
-from .prompts import COMPUTER_USE_GUIDE
 from .tools import build_tools
 
 PLUGIN_NAME = "astrbot_plugin_ssh_computer_use"
@@ -28,7 +28,7 @@ PLUGIN_NAME = "astrbot_plugin_ssh_computer_use"
     PLUGIN_NAME,
     "nagatoquin33",
     "基于 SSH 的全平台远程计算机操控：命令/文件/截图/键鼠，Windows 与 Linux 通用",
-    "v0.2.10",
+    "v0.3.0",
     "https://github.com/nagatoquin33/astrbot_plugin_ssh_computer_use",
 )
 class SshComputerUsePlugin(Star):
@@ -97,22 +97,10 @@ class SshComputerUsePlugin(Star):
     # ---------------- LLM 请求钩子 ----------------
 
     @filter.on_llm_request()
-    async def inject_computer_use_guide(self, event: AstrMessageEvent, req):
-        if not self.config.get("computer_use_prompt", True):
-            return
+    async def inject_pending_screenshot(self, event: AstrMessageEvent, req):
+        """补发上一轮未成功进入模型上下文的截图（文档通道：extra_user_content_parts）。"""
         if not self.config.get("enable_llm_tools", True):
             return
-        try:
-            target = self.pool.resolve(event.unified_msg_origin)
-        except Exception:
-            return
-        try:
-            req.system_prompt = (req.system_prompt or "") + COMPUTER_USE_GUIDE.format(
-                host=target.profile.name
-            )
-        except Exception as e:
-            logger.warning(f"[{PLUGIN_NAME}] 注入系统提示失败：{e}")
-        # 补发上一轮未成功进入模型上下文的截图（文档通道：extra_user_content_parts）
         pending = self._pending_shot
         if pending:
             try:
