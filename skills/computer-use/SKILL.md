@@ -25,6 +25,14 @@ description: 使用 computer_* 工具远程操控 Windows/Linux 桌面（GUI 自
 - 滚轮用 `computer_scroll`：正数向上、负数向下，单位为齿格
 - 点击输入框获得焦点后再输入文本
 
+## 窗口管理（Windows）
+
+- `computer_window(action="list")` 列出所有可见窗口（标题、进程、pid）
+- `computer_window(action="focus", query="chrome")` 把窗口置前并还原（切换窗口首选，比点击任务栏可靠）
+- `computer_window(action="minimize"/"maximize"/"restore", query=...)`
+- `computer_window(action="close", query=...)` 关闭窗口——**先与用户确认**
+- query 是标题或进程名的子串；操作前先 list 确认窗口存在
+
 ## 长驻与后台程序
 
 - 启动 GUI 程序、URL、文档：`computer_start`（不等待退出）

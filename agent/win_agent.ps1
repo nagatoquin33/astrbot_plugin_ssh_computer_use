@@ -21,7 +21,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$AgentVersion = 3
+$AgentVersion = 4
 
 $LogDir = Join-Path $env:USERPROFILE '.sshbot'
 $LogFile = Join-Path $LogDir 'agent.log'
@@ -121,6 +121,35 @@ public static class SshBotNative
 
     [DllImport("user32.dll")]
     public static extern bool SetProcessDPIAware();
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern IntPtr FindWindowW(string lpClassName, string lpWindowName);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern int GetWindowTextW(IntPtr hWnd, System.Text.StringBuilder lpString, int nMaxCount);
+
+    [DllImport("user32.dll")]
+    public static extern bool IsWindowVisible(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
+    public static extern bool IsIconic(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern IntPtr SendMessageW(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 }
 "@
 }
@@ -405,6 +434,70 @@ function Set-ClipboardTextSafe {
     throw "写入剪贴板失败（可能无交互式会话）"
 }
 
+# ---------------- 窗口操作 ----------------
+
+function Get-WindowList {
+    $list = New-Object System.Collections.Generic.List[object]
+    $cb = [SshBotNative+EnumWindowsProc] {
+        param($hWnd, $lParam)
+        try {
+            if (-not [SshBotNative]::IsWindowVisible($hWnd)) { return $true }
+            $sb = New-Object System.Text.StringBuilder 512
+            [void][SshBotNative]::GetWindowTextW($hWnd, $sb, 512)
+            $title = $sb.ToString()
+            if (-not $title) { return $true }
+            $pid = 0
+            [void][SshBotNative]::GetWindowThreadProcessId($hWnd, [ref]$pid)
+            $proc = try { (Get-Process -Id $pid -ErrorAction Stop).ProcessName } catch { '?' }
+            $list.Add(@{ hwnd = $hWnd.ToInt64(); pid = $pid; proc = $proc; title = $title })
+        } catch {}
+        return $true
+    }
+    [void][SshBotNative]::EnumWindows($cb, [IntPtr]::Zero)
+    return $list
+}
+
+function Resolve-Window {
+    param([string]$Query)
+    $wins = Get-WindowList
+    if ($Query -match '^\d+$') {
+        $hit = $wins | Where-Object { $_.hwnd -eq [long]$Query }
+        if ($hit) { return $hit }
+    }
+    $hits = @($wins | Where-Object {
+            $_.title -like "*$Query*" -or $_.proc -like "*$Query*"
+        })
+    if ($hits.Count -gt 0) { return $hits }
+    throw ("未找到匹配窗口（查询：{0}）。请先用 window_list 查看现有窗口" -f $Query)
+}
+
+function Invoke-WindowOp {
+    param([string]$Action, [string]$Query)
+    $hits = @(Resolve-Window -Query $Query)
+    $results = @()
+    foreach ($w in $hits) {
+        $h = [IntPtr]$w.hwnd
+        try {
+            switch ($Action) {
+                'focus' {
+                    if ([SshBotNative]::IsIconic($h)) { [void][SshBotNative]::ShowWindow($h, 9) }  # SW_RESTORE
+                    [void][SshBotNative]::SetForegroundWindow($h)
+                }
+                'minimize' { [void][SshBotNative]::ShowWindow($h, 6) }   # SW_MINIMIZE
+                'maximize' { [void][SshBotNative]::ShowWindow($h, 3) }   # SW_MAXIMIZE
+                'restore'  { [void][SshBotNative]::ShowWindow($h, 9) }   # SW_RESTORE
+                'close'    { [void][SshBotNative]::SendMessageW($h, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero) }  # WM_CLOSE
+                default { throw "未知窗口操作：$Action" }
+            }
+            $results += ("{0} (pid {1})：{2} 成功" -f $w.title, $w.pid, $Action)
+        } catch {
+            $results += ("{0}：{1} 失败（{2}）" -f $w.title, $Action, $_)
+        }
+    }
+    Start-Sleep -Milliseconds 200
+    return @{ results = ($results -join "`n"); count = $results.Count }
+}
+
 function Get-Info {
     $vs = Get-VirtualScreen
     $primary = [System.Windows.Forms.Screen]::PrimaryScreen
@@ -496,6 +589,15 @@ function Invoke-Op {
             $data = Invoke-StartApp -Command ([string]$Req.command)
         }
         'clipboard_get' { $data = @{ text = (Get-ClipboardTextSafe) } }
+        'window_list' {
+            $wins = Get-WindowList | Select-Object -First 40
+            $data = @{ windows = @($wins) }
+        }
+        'window' {
+            $action = 'focus'
+            if ($null -ne $Req.action) { $action = ([string]$Req.action).ToLower() }
+            $data = Invoke-WindowOp -Action $action -Query ([string]$Req.query)
+        }
         'clipboard_set' {
             Set-ClipboardTextSafe ([string]$Req.text)
             $data = @{ ok = $true }

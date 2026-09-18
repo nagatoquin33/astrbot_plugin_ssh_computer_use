@@ -140,7 +140,10 @@ class ComputerMoveTool(_SshToolBase):
 @dataclass
 class ComputerScrollTool(_SshToolBase):
     name: str = "computer_scroll"
-    description: str = "在远程主机上滚动鼠标滚轮。amount 为滚轮齿数，正数向上、负数向下。"
+    description: str = (
+        "在远程主机上滚动鼠标滚轮。amount 为滚轮齿数，正数向上、负数向下。"
+        "大幅滚动优先一次大数值（如 10）而非多次小数值；滚动后应重新截图确认位置。"
+    )
     parameters: dict = Field(
         default_factory=lambda: _schema(
             {"amount": {"type": "number", "description": "滚轮齿数，正上负下，如 3 或 -3"}},
@@ -238,6 +241,47 @@ class ComputerStartTool(_SshToolBase):
             return err
         _, target = self._resolve(context)
         return await target.gui_start(command.strip())
+
+
+@dataclass
+class ComputerWindowTool(_SshToolBase):
+    name: str = "computer_window"
+    description: str = (
+        "列出远程 Windows 主机的窗口，或对匹配的窗口执行操作。"
+        "action: list（列出窗口）/ focus（置前并还原）/ minimize / maximize / restore / close。"
+        "query: 窗口标题或进程名的子串（如 chrome、记事本），close 前先与用户确认。"
+        "仅 Windows 主机可用；优先用本工具切换/管理窗口而非点击任务栏。"
+    )
+    parameters: dict = Field(
+        default_factory=lambda: _schema(
+            {
+                "action": {"type": "string", "description": "list / focus / minimize / maximize / restore / close，默认 focus"},
+                "query": {"type": "string", "description": "窗口标题或进程名子串；action 为 list 时忽略"},
+            },
+            [],
+        )
+    )
+
+    async def call(self, context, action: str = "list", query: str = "", **kwargs) -> str:
+        if err := self._perm(context):
+            return err
+        _, target = self._resolve(context)
+        if target.os_type != "windows":
+            return "窗口管理仅支持 Windows 主机。"
+        action = (action or "list").strip().lower()
+        if action == "list":
+            wins = await target.window_list()
+            if not wins:
+                return "未发现可见窗口。"
+            lines = ["可见窗口："]
+            for w in wins:
+                lines.append(f"- {w.get('title')}（进程 {w.get('proc')}，pid {w.get('pid')}）")
+            lines.append("对窗口操作：computer_window(action=focus/minimize/maximize/close, query=<标题或进程名子串>)")
+            return "\n".join(lines)
+        if not query.strip():
+            return "请提供 query（窗口标题或进程名子串），或先用 action=list 列出窗口。"
+        d = await target.window_op(action, query.strip())
+        return str(d.get("results", "无结果"))
 
 
 @dataclass

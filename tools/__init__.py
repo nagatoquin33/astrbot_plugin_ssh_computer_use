@@ -12,6 +12,7 @@ from .computer_tools import (
     ComputerScrollTool,
     ComputerStartTool,
     ComputerTypeTool,
+    ComputerWindowTool,
 )
 from .ssh_tools import (
     SshExecTool,
@@ -38,6 +39,7 @@ TOOL_CLASSES = (
     ComputerExecTool,
     ComputerStartTool,
     ComputerInfoTool,
+    ComputerWindowTool,
     ComputerClipboardTool,
 )
 

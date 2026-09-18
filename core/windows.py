@@ -198,6 +198,12 @@ class WindowsTarget(SshTarget):
     async def clipboard_get(self) -> str:
         return await self.agent.clipboard_get()
 
+    async def window_list(self) -> list:
+        return await self.agent.window_list()
+
+    async def window_op(self, action: str, query: str) -> dict:
+        return await self.agent.window_op(action, query)
+
     async def clipboard_set(self, text: str) -> str:
         return await self.agent.clipboard_set(text)
 

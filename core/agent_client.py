@@ -190,6 +190,13 @@ class WinAgentClient:
         d = await self.call("clipboard_get", timeout=15)
         return str(d.get("text", ""))
 
+    async def window_list(self) -> list:
+        d = await self.call("window_list", timeout=15)
+        return list(d.get("windows") or [])
+
+    async def window_op(self, action: str, query: str) -> dict:
+        return await self.call("window", timeout=15, action=action, query=query)
+
     async def clipboard_set(self, text: str) -> str:
         await self.call("clipboard_set", timeout=15, text=text)
         return "已写入剪贴板"
